@@ -304,7 +304,7 @@ bool fmj_file_platform_write_memory(FMJFilePointer* file,char* file_name,void* m
 {
 	if(file->file == NULL)
 	{
-		file->file = fopen(file_name, options);
+		errno_t err = fopen_s(&file->file,file_name, options);
 	}
 	return fmj_write_to_file_(file->file,mem, size,is_done);
 }

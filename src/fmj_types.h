@@ -5,7 +5,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
-#include "external/meow_hash/meow_hash_x64_aesni.h"
+//#include "meow_hash/meow_hash_x64_aesni.h"
+#include "meow_hash/meow_hash_x64_aesni.h"
+
 
 #define APIDEF
 
@@ -27,7 +29,7 @@ typedef intptr_t imm;
 
 //TODO(Ray):Use compiler intrinsic where available ie..Clang GCC MSVC
 //It seems that this may get optimized out of some compilers. also annoying warning.
-#define ASSERT(Expression) if(!(Expression)){*(int *)0 = 0;};
+#define ASSERT(Expression) if(!(Expression)){/**(int *)0 = 0;*/};
 #define ARRAYCOUNT(Array) sizeof(Array) / sizeof((Array)[0])
 
 #define FMJKILOBYTES(v) (v * 1024LL)

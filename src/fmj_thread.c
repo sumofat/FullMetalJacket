@@ -54,6 +54,7 @@ u64 fmj_thread_get_thread_id()
     u32 ThreadID = *(u32 *)(ThreadLocalStorage + 0x48);
     return ThreadID;
 #endif
+	return -1;
 }
 
 FMJThread fmj_thread_create(void*(*func)(void*),void* func_data)
