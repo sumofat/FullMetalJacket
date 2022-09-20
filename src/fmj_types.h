@@ -8,7 +8,6 @@
 //#include "meow_hash/meow_hash_x64_aesni.h"
 #include "meow_hash/meow_hash_x64_aesni.h"
 
-
 #define APIDEF
 
 typedef float f32;
@@ -945,7 +944,5 @@ struct FMJRenderCommand
 } typedef FMJRenderCommand;
 
 //END RENDER COMMAND API
-
-
 #define FMJ_TYPES_H
 #endif

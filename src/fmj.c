@@ -11,3 +11,4 @@
 #include "fmj_3dtrans.c"
 #include "fmj_sprite.c"
 #include "fmj_ui.c"
+#include "fmj_app.c"
