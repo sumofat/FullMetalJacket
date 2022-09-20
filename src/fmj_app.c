@@ -1,4 +1,3 @@
-
 #include "fmj_types.h"
 #include <stdbool.h>
 
@@ -19,27 +18,22 @@ FMJApp fmj_app_create(){
 	FMJApp result = {0};
 
 #ifdef WINDOWS
-	// Create a window for a windows app
-	
 	WNDCLASSEXA wc = {0};
 	wc.cbSize = sizeof(WNDCLASSEXA);
 	wc.style = CS_HREDRAW | CS_VREDRAW;
 	wc.lpfnWndProc = DefWindowProcA;
 	wc.hInstance = GetModuleHandleA(NULL);
-	//wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
 	wc.lpszClassName = "FMJWindowClass";
 
 	if (RegisterClassExA(&wc)){
 		HWND hr = CreateWindowEx(0, "STATIC", "FMJ", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, NULL, NULL, NULL, NULL);
 		result.window.ptr = hr;
-
 		int ErrorCode = GetLastError();
 		if (ErrorCode != 0){
 			printf("Error: %d", ErrorCode);
 		}
 		 ShowWindow(hr,SW_SHOWNORMAL);
 	}
-
 #elif DARWIN
 #elif LINUX
 #endif
@@ -67,3 +61,4 @@ void fmj_app_update(FMJApp* app){
 	fmj_app_handle_windows_messages(app);
 #endif
 }
+
