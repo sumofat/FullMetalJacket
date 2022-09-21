@@ -176,73 +176,90 @@ if (useWarp)
 }
 
 ID3D12Device2* CreateDevice(IDXGIAdapter4* adapter){
-        
-#if USE_DEBUG_LAYER
-        EnableDebugLayer();
-#endif
-        ID3D12Device2* d3d12Device2;
-        HRESULT r = D3D12CreateDevice((IUnknown*)adapter, D3D_FEATURE_LEVEL_11_0,&IID_ID3D12Device2,(void**)&d3d12Device2);
-		ASSERT(SUCCEEDED(r));
 
-/*        
-        HRESULT r  = D3D12CreateDevice(
-			_In_opt_  IUnknown          *pAdapter,
-			D3D_FEATURE_LEVEL MinimumFeatureLevel,
-			_In_      REFIID            riid,
-			_Out_opt_ void              **ppDevice
-            );
-			*/
-        
-        // Enable debug messages in debug mode.
 #if USE_DEBUG_LAYER
-        ID3D12InfoQueue* pInfoQueue;
-        HRESULT result = d3d12Device2->QueryInterface(&pInfoQueue);
-        if (SUCCEEDED(result))
-        {
-            pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-            pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-            pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
-            // Suppress whole categories of messages
-            //D3D12_MESSAGE_CATEGORY Categories[] = {};
-            
-            // Suppress messages based on their severity level
-            D3D12_MESSAGE_SEVERITY Severities[] =
-            {
-                D3D12_MESSAGE_SEVERITY_INFO
-            };
-            
-            // Suppress individual messages by their ID
-            D3D12_MESSAGE_ID DenyIds[] = {
-                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
-                D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
-                D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
-            };
-            
-            D3D12_INFO_QUEUE_FILTER NewFilter = {};
-            //NewFilter.DenyList.NumCategories = _countof(Categories);
-            //NewFilter.DenyList.pCategoryList = Categories;
-            NewFilter.DenyList.NumSeverities = _countof(Severities);
-            NewFilter.DenyList.pSeverityList = Severities;
-            NewFilter.DenyList.NumIDs = _countof(DenyIds);
-            NewFilter.DenyList.pIDList = DenyIds;
-            
-            pInfoQueue->PushStorageFilter(&NewFilter);
-        }
-        else
-        {
-            ASSERT(false);
-        }
+	EnableDebugLayer();
 #endif
-        return d3d12Device2;
-    }
+	ID3D12Device2* d3d12Device2;
+	HRESULT r = D3D12CreateDevice((IUnknown*)adapter, D3D_FEATURE_LEVEL_11_0,&IID_ID3D12Device2,(void**)&d3d12Device2);
+	ASSERT(SUCCEEDED(r));
 
-u32 GetCurrentBackBufferIndex(IDXGISwapChain4* swapChain4){
-	u32 backBufferIndex;
-	HRESULT result = IDXGISwapChain4_GetCurrentBackBufferIndex(swapChain4,&backBufferIndex);
-	ASSERT(SUCCEEDED(result));
-	return backBufferIndex;
+	/*        
+			  HRESULT r  = D3D12CreateDevice(
+			  _In_opt_  IUnknown          *pAdapter,
+			  D3D_FEATURE_LEVEL MinimumFeatureLevel,
+			  _In_      REFIID            riid,
+			  _Out_opt_ void              **ppDevice
+			  );
+			  */
+
+	// Enable debug messages in debug mode.
+#if USE_DEBUG_LAYER
+	ID3D12InfoQueue* pInfoQueue;
+	HRESULT result = d3d12Device2->QueryInterface(&pInfoQueue);
+	if (SUCCEEDED(result))
+	{
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+		// Suppress whole categories of messages
+		//D3D12_MESSAGE_CATEGORY Categories[] = {};
+
+		// Suppress messages based on their severity level
+		D3D12_MESSAGE_SEVERITY Severities[] =
+		{
+			D3D12_MESSAGE_SEVERITY_INFO
+		};
+
+		// Suppress individual messages by their ID
+		D3D12_MESSAGE_ID DenyIds[] = {
+			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
+			D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
+			D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
+		};
+
+		D3D12_INFO_QUEUE_FILTER NewFilter = {};
+		//NewFilter.DenyList.NumCategories = _countof(Categories);
+		//NewFilter.DenyList.pCategoryList = Categories;
+		NewFilter.DenyList.NumSeverities = _countof(Severities);
+		NewFilter.DenyList.pSeverityList = Severities;
+		NewFilter.DenyList.NumIDs = _countof(DenyIds);
+		NewFilter.DenyList.pIDList = DenyIds;
+
+		pInfoQueue->PushStorageFilter(&NewFilter);
+	}
+	else
+	{
+		ASSERT(false);
+	}
+#endif
+	return d3d12Device2;
+}
+/*
+void UpdateRenderTargetViews(ID3D12Device2* device,IDXGISwapChain4* swapChain, ID3D12DescriptorHeap* descriptorHeap)
+{
+	auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	//CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+	for (int i = 0; i < num_of_back_buffers; ++i)
+	{
+		ID3D12Resource* backBuffer;
+		(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+		device->CreateRenderTargetView(backBuffer, nullptr, rtvHandle);
+		back_buffers[i] = backBuffer;
+		u64 offset = (u64)rtv_desc_size * (u64)i;
+		rtvHandle.ptr = rtvHandle.ptr + (SIZE_T)offset;            
+		//            rtvHandle.Offset(rtvDescriptorSize);
+	}
 }
 
+   u32 GetCurrentBackBufferIndex(IDXGISwapChain4* swapChain4){
+   u32 backBufferIndex;
+   HRESULT result = IDXGISwapChain4_GetCurrentBackBufferIndex(swapChain4,&backBufferIndex);
+   ASSERT(SUCCEEDED(result));
+   return backBufferIndex;
+   }
+   */
 #endif
 
 
