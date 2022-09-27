@@ -1,5 +1,7 @@
 #include "fmj_types.h"
 
+
+
 f2 f2_create(f32 a,f32 b)
 {
     f2 result = {0};
@@ -294,9 +296,20 @@ f3 cross(f3 a, f3 b)
 
 f32 safe_ratio_zero(f32 a,f32 b){ if (a == 0.0f || b == 0.0f) { return 0.0f; } else { return a / b; } }
 
+#define sum(a) _Generic((a), float2: float2_sum, float3: float3_sum)(a)
+
+f32 float2_sum(float2 a)
+{
+    return a[0] + a[1];
+}
+
 f32 f2_sum(f2 a)
 {
     return a.x + a.y;
+}
+
+f32 float3_sum(float3 a){
+	return a[0] + a[1] + a[2];
 }
 
 f32 f3_sum(f3 a)
@@ -322,6 +335,14 @@ f32 f3_length(f3 a)
 f32 f4_length(f4 a)
 {
     return sqrtf(f4_dot(a, a));
+}
+
+FMJ_OVERLOAD float dot(float2 a,float2 b){
+	return sum(a * b);
+}
+
+FMJ_OVERLOAD float dot(float3 a,float3 b){
+	return sum(a * b);
 }
 
 f32 f2_dot(f2 a, f2 b)
