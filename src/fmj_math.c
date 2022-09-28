@@ -308,13 +308,48 @@ typedef union {
 	float2 f;
 }ufloat2;
 
+typedef union {
+#if __aarch64__
+	float32x4_t v;
+#elif __x86__ || _M_AMD64
+	__m128 v;
+#endif
+	float3 f;
+}ufloat3;
+
+FMJ_OVERLOAD ufloat2 intrinsic_sqroot(ufloat2 a){
+	ufloat2 uf;
+#if __x86_64__ || _M_AMD64
+	uf.v = _mm_sqrt_ps(uf.v);
+#elif __aarch64__
+	uf.v = vsqrtq_f32(uf.v);
+#endif
+	return uf;
+}
+
+FMJ_OVERLOAD ufloat3 intrinsic_sqroot(ufloat3 a){
+	ufloat3 uf;
+#if __x86_64__ || _M_AMD64
+	uf.v = _mm_sqrt_ps(uf.v);
+#elif __aarch64__
+	uf.v = vsqrtq_f32(uf.v);
+#endif
+	return uf;
+}
+
+FMJ_OVERLOAD float intrinsics_sum(ufloat2 a){
+#if __x86__ || _M_AMD64
+	a.v = _mm_hadd_ps(a.v,a.v);
+#elif __aarch64__
+	a.v = vpaddq_f32(a.v,a.v);
+#endif
+	return a.f[0];
+}
+
 FMJ_OVERLOAD float sum(float2 a){
-	ufloat2 b;
+	ufloat2 b = {0};
 	b.f = a;
-	b.v = _mm_hadd_ps(b.v,b.v);
-	//v = _mm_hadd_ps(v, v);
-	//return a[0] + a[1];
-	return b.f[0];
+	return intrinsics_sum(b);
 }
 
 FMJ_OVERLOAD float sum(float3 a){
@@ -393,35 +428,6 @@ f2  f2_sqroot(f2 a) { return f2_create(sqrt(a.x),sqrt(a.y)); }
 f3  f3_sqroot(f3 a) { return f3_create(sqrt(a.x),sqrt(a.y),sqrt(a.z)); }
 f4  f4_sqroot(f4 a) { return f4_create(sqrt(a.x),sqrt(a.y),sqrt(a.z),sqrt(a.w));}
 
-FMJ_OVERLOAD ufloat2 intrinsic_sqroot(ufloat2 a){
-	ufloat2 uf;
-#if __x86_64__ || _M_AMD64
-	uf.v = _mm_sqrt_ps(uf.v);
-#elif __aarch64__
-	uf.v = vsqrtq_f32(uf.v);
-#endif
-	return uf;
-}
-
-typedef union {
-#if __aarch64__
-	float32x4_t v;
-#elif __x86__ || _M_AMD64
-	__m128 v;
-#endif
-	float3 f;
-}ufloat3;
-
-FMJ_OVERLOAD ufloat3 intrinsic_sqroot(ufloat3 a){
-	ufloat3 uf;
-#if __x86_64__ || _M_AMD64
-	uf.v = _mm_sqrt_ps(uf.v);
-#elif __aarch64__
-	uf.v = vsqrtq_f32(uf.v);
-#endif
-	return uf;
-}
-
 FMJ_OVERLOAD float2 sqroot(float2 a){
 	ufloat2 uf;
 	uf.f = a;
@@ -437,11 +443,41 @@ FMJ_OVERLOAD float3 sqroot(float3 a){
 	return result;
 }
 
+FMJ_OVERLOAD float2 rsqrt(float2 a){
+	ufloat2 uf;
+	uf.f = a;
+#if __x86_64__ || _M_AMD64
+	uf.v = _mm_rsqrt_ps(uf.v);
+#elif __aarch64__
+	uf.v = vrsqrteq_f32(uf.v);
+#endif
+	return uf.f;
+}
+
+FMJ_OVERLOAD float3 rsqrt(float3 a){
+	ufloat3 uf;
+	uf.f = a;
+#if __x86_64__ || _M_AMD64
+	uf.v = _mm_rsqrt_ps(uf.v);
+#elif __aarch64__
+	uf.v = vrsqrteq_f32(uf.v);
+#endif
+	return uf.f;
+}
+
 f32 rsqrt(float a)  { return 1.0f / sqrt(a); }
 
 f2  f2_rsqrt(f2 a) { return f2_s_div(1.0f,f2_sqroot(a));}
 f3  f3_rsqrt(f3 a) { return f3_s_div(1.0f,f3_sqroot(a));}
 f4  f4_rsqrt(f4 a) { return f4_s_div(1.0f,f4_sqroot(a));}
+
+FMJ_OVERLOAD float2 normalize(float2 a){
+	return a * rsqrt(dot(a, a));
+}
+
+FMJ_OVERLOAD float3 normalize(float3 a){
+	return a * rsqrt(dot(a, a));
+}
 
 f2 f2_normalize(f2 a){return f2_mul_s(a,(safe_ratio_zero(1.0f , f2_length(a))));}
 f3 f3_normalize(f3 a){return f3_mul_s(a,(safe_ratio_zero(1.0f , f3_length(a))));}
@@ -478,7 +514,6 @@ void  sincos(f32  x,f32* s,f32* c) { *s = sinf(x); *c = cosf(x); }
 void  f2_sincos(f2 x,f2* s,f2* c) { *s = f2_sin(x); *c = f2_cos(x); }
 void  f3_sincos(f3 x,f3* s,f3* c) { *s = f3_sin(x); *c = f3_cos(x); }
 void  f4_sincos(f4 x,f4* s,f4* c) { *s = f4_sin(x); *c = f4_cos(x); }
-
 
 f32 remap(f32  a, f32  b, f32  c, f32  d, f32  x)  { return lerp(c, d, unlerp(a, b, x)); }
 f2  f2_remap(f2 a, f2 b, f2 c, f2 d, f2 x) { return f2_lerp(c, d, f2_unlerp(a, b, x)); }
