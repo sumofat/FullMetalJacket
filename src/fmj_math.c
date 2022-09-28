@@ -1,7 +1,5 @@
 #include "fmj_types.h"
 
-
-
 f2 f2_create(f32 a,f32 b)
 {
     f2 result = {0};
@@ -296,19 +294,30 @@ f3 cross(f3 a, f3 b)
 
 f32 safe_ratio_zero(f32 a,f32 b){ if (a == 0.0f || b == 0.0f) { return 0.0f; } else { return a / b; } }
 
-#define sum(a) _Generic((a), float2: float2_sum, float3: float3_sum)(a)
-
-f32 float2_sum(float2 a)
-{
-    return a[0] + a[1];
-}
-
 f32 f2_sum(f2 a)
 {
     return a.x + a.y;
 }
 
-f32 float3_sum(float3 a){
+typedef union {
+#if __aarch64__
+	float32x4_t v;
+#elif __x86__ || _M_AMD64
+	__m128 v;
+#endif
+	float2 f;
+}ufloat2;
+
+FMJ_OVERLOAD float sum(float2 a){
+	ufloat2 b;
+	b.f = a;
+	b.v = _mm_hadd_ps(b.v,b.v);
+	//v = _mm_hadd_ps(v, v);
+	//return a[0] + a[1];
+	return b.f[0];
+}
+
+FMJ_OVERLOAD float sum(float3 a){
 	return a[0] + a[1] + a[2];
 }
 
@@ -345,6 +354,14 @@ FMJ_OVERLOAD float dot(float3 a,float3 b){
 	return sum(a * b);
 }
 
+FMJ_OVERLOAD float length(float2 a){
+	return sqrtf(dot(a, a));
+}
+
+FMJ_OVERLOAD float length(float3 a){
+	return sqrtf(dot(a, a));
+}
+
 f32 f2_dot(f2 a, f2 b)
 {
     return f2_sum(f2_mul(a,b));    
@@ -376,7 +393,52 @@ f2  f2_sqroot(f2 a) { return f2_create(sqrt(a.x),sqrt(a.y)); }
 f3  f3_sqroot(f3 a) { return f3_create(sqrt(a.x),sqrt(a.y),sqrt(a.z)); }
 f4  f4_sqroot(f4 a) { return f4_create(sqrt(a.x),sqrt(a.y),sqrt(a.z),sqrt(a.w));}
 
+FMJ_OVERLOAD ufloat2 intrinsic_sqroot(ufloat2 a){
+	ufloat2 uf;
+#if __x86_64__ || _M_AMD64
+	uf.v = _mm_sqrt_ps(uf.v);
+#elif __aarch64__
+	uf.v = vsqrtq_f32(uf.v);
+#endif
+	return uf;
+}
+
+typedef union {
+#if __aarch64__
+	float32x4_t v;
+#elif __x86__ || _M_AMD64
+	__m128 v;
+#endif
+	float3 f;
+}ufloat3;
+
+FMJ_OVERLOAD ufloat3 intrinsic_sqroot(ufloat3 a){
+	ufloat3 uf;
+#if __x86_64__ || _M_AMD64
+	uf.v = _mm_sqrt_ps(uf.v);
+#elif __aarch64__
+	uf.v = vsqrtq_f32(uf.v);
+#endif
+	return uf;
+}
+
+FMJ_OVERLOAD float2 sqroot(float2 a){
+	ufloat2 uf;
+	uf.f = a;
+	uf = intrinsic_sqroot(uf);
+	return uf.f;
+}
+
+FMJ_OVERLOAD float3 sqroot(float3 a){
+	ufloat3 uf;
+	uf.f = a;
+	uf = intrinsic_sqroot(uf);
+	float3 result = uf.f;
+	return result;
+}
+
 f32 rsqrt(float a)  { return 1.0f / sqrt(a); }
+
 f2  f2_rsqrt(f2 a) { return f2_s_div(1.0f,f2_sqroot(a));}
 f3  f3_rsqrt(f3 a) { return f3_s_div(1.0f,f3_sqroot(a));}
 f4  f4_rsqrt(f4 a) { return f4_s_div(1.0f,f4_sqroot(a));}

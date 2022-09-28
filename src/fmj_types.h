@@ -6,6 +6,9 @@
 #include <string.h>
 #include <math.h>
 //#include "meow_hash/meow_hash_x64_aesni.h"
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
 #include "meow_hash/meow_hash_x64_aesni.h"
 
 #define APIDEF
