@@ -9,6 +9,9 @@
 //#include "D3DX12.h"
 #include "D3d12.h"
 #include "D3DCompiler.h"
+#include "fmj_heap.c"
+#include "fmj_gpufence.c"
+
 #pragma comment (lib, "dxguid.lib")
 
 bool EnableDebugLayer(){
@@ -87,7 +90,7 @@ IDXGISwapChain4* CreateSwapChain(HWND hWnd,ID3D12CommandQueue* commandQueue,u32 
 	IDXGIFactory4* dxgiFactory4;
 	UINT createFactoryFlags = 0;
 #if defined(_DEBUG)
-	//createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+	createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
 	CreateDXGIFactory2(createFactoryFlags,&IID_IDXGIFactory4, (void**)&dxgiFactory4);
@@ -133,7 +136,7 @@ IDXGIAdapter4* GetAdapter(bool useWarp)
 	IDXGIFactory4* dxgifactory;
 	UINT create_fac_flags = 0;
 #if defined(_DEBUG)
-	//create_fac_flags = DXGI_CREATE_FACTORY_DEBUG;
+	create_fac_flags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
 	CreateDXGIFactory2(create_fac_flags,&IID_IDXGIFactory4, (void**)&dxgifactory);
@@ -235,31 +238,26 @@ ID3D12Device2* CreateDevice(IDXGIAdapter4* adapter){
 #endif
 	return d3d12Device2;
 }
-/*
-void UpdateRenderTargetViews(ID3D12Device2* device,IDXGISwapChain4* swapChain, ID3D12DescriptorHeap* descriptorHeap)
-{
-	auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	for (int i = 0; i < num_of_back_buffers; ++i)
-	{
-		ID3D12Resource* backBuffer;
-		(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-		device->CreateRenderTargetView(backBuffer, nullptr, rtvHandle);
-		back_buffers[i] = backBuffer;
+void init_back_buffers(int num_of_back_buffers,ID3D12Resource** back_buffers,ID3D12Device2* device,IDXGISwapChain4* swapChain, ID3D12DescriptorHeap* descriptorHeap){
+
+	int rtv_desc_size = ID3D12Device_GetDescriptorHandleIncrementSize(device,D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle; 
+	ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(descriptorHeap,&rtv_handle);
+
+	for (int i = 0; i < num_of_back_buffers; ++i){
+		ID3D12Resource* back_buffer;
+		IDXGISwapChain_GetBuffer(swapChain, i, &IID_ID3D12Resource, (void**)&back_buffer);
+		//(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+		ID3D12Device_CreateRenderTargetView(device, back_buffer, NULL, rtv_handle);
+		//device->CreateRenderTargetView(backBuffer, nullptr, rtvHandle);
+		back_buffers[i] = back_buffer;
 		u64 offset = (u64)rtv_desc_size * (u64)i;
-		rtvHandle.ptr = rtvHandle.ptr + (SIZE_T)offset;            
-		//            rtvHandle.Offset(rtvDescriptorSize);
+		rtv_handle.ptr = rtv_handle.ptr + (SIZE_T)offset;            
 	}
 }
 
-   u32 GetCurrentBackBufferIndex(IDXGISwapChain4* swapChain4){
-   u32 backBufferIndex;
-   HRESULT result = IDXGISwapChain4_GetCurrentBackBufferIndex(swapChain4,&backBufferIndex);
-   ASSERT(SUCCEEDED(result));
-   return backBufferIndex;
-   }
-   */
 #endif
 
 

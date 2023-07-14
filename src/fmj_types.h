@@ -6,10 +6,13 @@
 #include <string.h>
 #include <math.h>
 //#include "meow_hash/meow_hash_x64_aesni.h"
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
 #include "meow_hash/meow_hash_x64_aesni.h"
 
 #define APIDEF
-
+#define FMJ_OVERLOAD __attribute__((overloadable))
 typedef float f32;
 typedef double f64;
 
@@ -56,6 +59,7 @@ enum FMJType
     fmj_type_b32,
     fmj_type_memory_index,
 };
+
 //OS API
 void* fmj_os_allocate(umm size);
 void fmj_os_deallocate(void* mem,umm size);
@@ -392,6 +396,11 @@ FMJThreadSemaphore fmj_thread_create_semaphore(u64 value);
 //END THREAD API
 
 //BEGIN MATH API
+typedef float float2 __attribute__ ((vector_size (8)));
+typedef int float2i __attribute__ ((vector_size (8)));
+
+typedef float float3 __attribute__ ((vector_size (12)));
+typedef int float3i __attribute__ ((vector_size (12)));
 
 union f2
 {
