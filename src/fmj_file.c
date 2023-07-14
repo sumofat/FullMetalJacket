@@ -107,7 +107,8 @@ FMJFileReadResult fmj_file_win32_read_entire_file(char* path)
 
 #elif OSX
 #include <CoreFoundation/CoreFoundation.h>
-FMJFileDirInfoResult fmj_file_osx_get_all_file_indir_(FMJStr path,MemoryArena *arena,bool recursively,bool get_full_path)
+#include <sys/stat.h>
+FMJFileDirInfoResult fmj_file_osx_get_all_file_indir_(FMJString path,FMJMemoryArena *arena,bool recursively,bool get_full_path)
 {
     FMJFileDirInfoResult result;
     result.files = fmj_fixed_buffer_init(1000,sizeof(FMJFileInfo),8);
@@ -130,10 +131,10 @@ FMJFileDirInfoResult fmj_file_osx_get_all_file_indir_(FMJStr path,MemoryArena *a
         }
 
         CFNumberRef value_num = NULL;
-        CFMutableStringRef file_name =  CFStringCreateMutableCopy(kCFAllocatorDefault, 0, CFURLGetString(url));
-        const char *cs = CFStringGetCStringPtr( file_name, kCFStringEncodingMacRoman ) ;
-        FMJStr path_to_file = CreateStringFromLiteral((char*)cs, arena);
-        FMJStr file_name = {0};
+        CFMutableStringRef cffile_name =  CFStringCreateMutableCopy(kCFAllocatorDefault, 0, CFURLGetString(url));
+        const char *cs = CFStringGetCStringPtr( cffile_name, kCFStringEncodingMacRoman ) ;
+		FMJString path_to_file = fmj_string_create((char*)cs,arena);
+        FMJString file_name = {0};
         if(get_full_path)
         {
             file_name = path_to_file;
@@ -146,17 +147,17 @@ FMJFileDirInfoResult fmj_file_osx_get_all_file_indir_(FMJStr path,MemoryArena *a
         }
         else
         {
-            file_name = GetFilenameFromPath(path_to_file,arena);
+			file_name = fmj_string_get_filename(path_to_file.string,path_to_file.length,arena);
         }
 
-        file_info info = {0};
-        info.Name = file_name;
-        YoyoPushBack(&result.files, info);
+        FMJFileInfo info = {0};
+        info.name = file_name;
+        fmj_fixed_buffer_push(&result.files, (void*)&info);
         if (CFURLCopyResourcePropertyForKey(url, kCFURLFileSizeKey, &value_num, 0) && (value_num != NULL))
         {
         }
         CFRelease(value_num);
-        CFRelease(file_name);
+        CFRelease(cffile_name);
     }
     //CFRelease(url);
     CFRelease(enumerator);
@@ -165,7 +166,7 @@ FMJFileDirInfoResult fmj_file_osx_get_all_file_indir_(FMJStr path,MemoryArena *a
     return result;
 }
 
-FMJFileReadResult OSXReadEntireFile(char* Path)
+FMJFileReadResult fmj_file_osx_read_entire_file(char* Path)
 {
     FMJFileReadResult result = {0};
     FILE *file = fopen (Path, "r");
@@ -195,10 +196,10 @@ FMJFileReadResult OSXReadEntireFile(char* Path)
 
 #elif IOS
 #include <mach/mach_init.h>
-FMJFileDirInfoResult fmj_file_ios_get_all_file_indir_(FMJStr path,MemoryArena *arena)
+FMJFileDirInfoResult fmj_file_ios_get_all_file_indir_(FMJString path,MemoryArena *arena)
 {
     dir_files_result result;
-    result.files = YoyoInitVector(1000,sizeof(file_info),false);
+    result.files = fmj_fixed_buffer_init(1000,sizeof(file_info),8);
     CFAllocatorRef alloc = CFAllocatorGetDefault();
     CFStringRef DirRef = CFStringCreateWithCString(alloc, path.string, kCFStringEncodingASCII);
     CFURLRef url_ref = CFURLCreateWithString(alloc, DirRef, NULL);
@@ -210,7 +211,7 @@ FMJFileDirInfoResult fmj_file_ios_get_all_file_indir_(FMJStr path,MemoryArena *a
         CFNumberRef value_num = NULL;
         CFMutableStringRef file_name =  CFStringCreateMutableCopy(kCFAllocatorDefault, 0, CFURLGetString(url));
         const char *cs = CFStringGetCStringPtr( file_name, kCFStringEncodingMacRoman ) ;
-        FMJStr path_to_file = CreateStringFromLiteral((char*)cs, arena);
+        FMJString path_to_file = CreateStringFromLiteral((char*)cs, arena);
         char* End = path_to_file.string + path_to_file.length - 1;
         u32 StepCount = 1;
         while(*(End - 1) != '/')
@@ -218,10 +219,10 @@ FMJFileDirInfoResult fmj_file_ios_get_all_file_indir_(FMJStr path,MemoryArena *a
             --End;
             ++StepCount;
         }
-        FMJStr file_name = CreateStringFromLength(End, StepCount, arena);
+        FMJString file_name = CreateStringFromLength(End, StepCount, arena);
         file_info info;
         info.Name = file_name;
-        YoyoPushBack(&result.files, info);
+        fmj_fixed_buffer_push(&result.files, (void*)&info);
         if (CFURLCopyResourcePropertyForKey(url, kCFURLFileSizeKey, &value_num, nullptr) && (value_num != NULL))
         {
         }
@@ -260,7 +261,8 @@ FMJFileDirInfoResult fmj_file_platform_get_all_files_in_dir(char* path, FMJMemor
 #if WINDOWS
 	result = fmj_file_win32_get_all_files_indir_(path, arena);
 #elif OSX
-    result = fmj_file_osx_get_all_file_indir_(path, arena,true,true);
+	FMJString s_path = fmj_string_create(path,arena);
+    result = fmj_file_osx_get_all_file_indir_(s_path, arena,true,true);
 #elif IOS
     result = fmj_file_ios_get_all_file_indir_(path, arena);
 #endif
@@ -300,11 +302,13 @@ bool fmj_write_to_file_(FILE* file, void* mem,u64 size, bool is_done)
     return result;
 }
 
+#include <errno.h>
+
 bool fmj_file_platform_write_memory(FMJFilePointer* file,char* file_name,void* mem,u64 size,bool is_done,char* options)
 {
 	if(file->file == NULL)
 	{
-		errno_t err = fopen_s(&file->file,file_name, options);
+		file->file = fopen(file_name, options);
 	}
 	return fmj_write_to_file_(file->file,mem, size,is_done);
 }

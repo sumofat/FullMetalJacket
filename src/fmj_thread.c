@@ -25,7 +25,7 @@ u64 fmj_thread_get_cpu_core_count()
 #elif OSX
     int mib[4];
     int numCPU;
-    std::size_t len = sizeof(numCPU); 
+    u64 len = sizeof(numCPU); 
 /* set the mib for hw.ncpu */
     mib[0] = CTL_HW;
     mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
@@ -48,7 +48,7 @@ u64 fmj_thread_get_thread_id()
 {
 #if IOS || OSX
     mach_port_t threadport = pthread_mach_thread_np(pthread_self());
-    return (memory_index)threadport;
+    return (umm)threadport;
 #elif WINDOWS
     u8 *ThreadLocalStorage = (u8 *)__readgsqword(0x30);
     u32 ThreadID = *(u32 *)(ThreadLocalStorage + 0x48);

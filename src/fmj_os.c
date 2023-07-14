@@ -20,12 +20,16 @@ void fmj_os_win32_deallocate(void* mem,umm size)
 }
 
 #elif OSX
+#include <CoreFoundation/CoreFoundation.h>
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <mach/vm_map.h>
 
-void* fmj_os_osx_allocate(umm size)
+void* fmj_os_osx_allocate(umm in_size)
 {
     mach_vm_address_t address;
     kern_return_t kr;
-    mach_vm_size_t size = (mach_vm_size_t)size;
+    mach_vm_size_t size = (mach_vm_size_t)in_size;
     kr = mach_vm_allocate(mach_task_self(), &address, size, VM_FLAGS_ANYWHERE);
     ASSERT(address);
     return (void*)address;
@@ -60,7 +64,7 @@ void* fmj_os_allocate(umm size)
 {
     void* result = 0;
 #if OSX
-    result = OSXAllocateMemory(size);
+    result = fmj_os_osx_allocate(size);
 #elif WINDOWS
     result = fmj_os_win32_allocate(size);
 #elif IOS
